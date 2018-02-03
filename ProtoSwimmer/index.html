@@ -28,6 +28,31 @@
   var waves;
   var scoreText;
 
+  /**
+   * @returns {*}
+   */
+  function createWave() {
+    var drawnObject;
+    var width = 100; // example;
+    var height = 50; // example;
+    var bmd = game.add.bitmapData(width, height);
+
+    bmd.ctx.beginPath();
+    bmd.ctx.rect(0, 0, width, height);
+
+    var grd = bmd.context.createLinearGradient(0, 0, 0, 100);
+    grd.addColorStop(0, "#006994");
+    //grd.addColorStop(0.1, "#39515b");
+    grd.addColorStop(1, "white");
+    bmd.context.fillStyle = grd;
+    bmd.ctx.fillRect(0, 0, width, height);
+
+    drawnObject = waves.create(game.world.centerX, game.world.centerY, bmd);
+    drawnObject.anchor.setTo(0.5, 0.5);
+
+    return drawnObject;
+  }
+
   function create() {
     game.stage.backgroundColor = '#006994';
 
@@ -54,23 +79,7 @@
     waves = game.add.group();
     waves.enableBody = true;
 
-    var drawnObject;
-    var width = 100; // example;
-    var height = 50; // example;
-    var bmd = game.add.bitmapData(width, height);
-
-    bmd.ctx.beginPath();
-    bmd.ctx.rect(0, 0, width, height);
-
-    var grd = bmd.context.createLinearGradient(0, 0, 0, 100);
-    grd.addColorStop(0, "#006994");
-    //grd.addColorStop(0.1, "#39515b");
-    grd.addColorStop(1, "white");
-    bmd.context.fillStyle = grd;
-    bmd.ctx.fillRect(0, 0, width, height);
-
-    drawnObject = waves.create(game.world.centerX, game.world.centerY, bmd);
-    drawnObject.anchor.setTo(0.5, 0.5);
+    createWave();
 
     //  The score
     scoreText = game.add.text(16, 16, 'Swim!', {fontSize: '32px', fill: '#000'});
@@ -105,6 +114,16 @@
       player.animations.stop();
 
       player.frame = 4;
+    }
+
+    for (var i = 0; i < waves.children.length; i++) {
+      var wave = waves.children[i];
+
+      wave.alpha -= 0.01;
+
+      if (wave.alpha < 0) {
+        wave.kill();
+      }
     }
 
     function collectStar(player, star) {

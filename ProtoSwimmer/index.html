@@ -24,48 +24,91 @@
 
   var player;
   var cursors;
+  var wind = {
+    angle: 0,
+    force: 0
+  };
 
   var waves;
   var scoreText;
 
+  var waveCreationTimer;
+
   /**
    * @returns {*}
    */
-  function createWave() {
-    var drawnObject;
-    var width = 100; // example;
-    var height = 50; // example;
-    var bmd = game.add.bitmapData(width, height);
+  function createWaves() {
+    waves = game.add.group();
+    waves.enableBody = true;
 
-    bmd.ctx.beginPath();
-    bmd.ctx.rect(0, 0, width, height);
+    waveCreationTimer = game.time.create(true);
 
-    var grd = bmd.context.createLinearGradient(0, 0, 0, 100);
-    grd.addColorStop(0, "#006994");
-    //grd.addColorStop(0.1, "#39515b");
-    grd.addColorStop(1, "white");
-    bmd.context.fillStyle = grd;
-    bmd.ctx.fillRect(0, 0, width, height);
+    waveCreationTimer.loop(5000, createWavePhase, {}, waveCreationTimer);
+    //createWavePhase();
 
-    drawnObject = waves.create(game.world.centerX, game.world.centerY, bmd);
-    drawnObject.anchor.setTo(0.5, 0.5);
+    function createWavePhase() {
+      wind.angle = Math.random() * 360;
+      wind.force = 1;
 
-    return drawnObject;
+      var numberOfWaves = 1 + Math.round(Math.random() * 4);
+
+      for (var i = 0; i < numberOfWaves; i++) {
+        var randomWaveTimer = game.time.create(true);
+
+        var number = Math.round(Math.random() * (numberOfWaves * 1000));
+        randomWaveTimer.loop(number, createWave, {}, randomWaveTimer);
+        randomWaveTimer.start();
+      }
+
+      function createWave(randomWaveTimer) {
+        var wave;
+        var width = 50; // example;
+        var height = 100; // example;
+        var bmd = game.add.bitmapData(width, height);
+
+        bmd.ctx.beginPath();
+        bmd.ctx.rect(0, 0, width, height);
+
+        var grd = bmd.context.createLinearGradient(0, 0, 100, 0);
+        grd.addColorStop(0, "#006994");
+        //grd.addColorStop(0.1, "#39515b");
+        grd.addColorStop(1, "white");
+        bmd.context.fillStyle = grd;
+        bmd.ctx.fillRect(0, 0, width, height);
+
+        var randomWaveLocation = {
+          x: Math.random() * game.world.width,
+          y: Math.random() * game.world.height
+        };
+
+        wave = waves.create(randomWaveLocation.x, randomWaveLocation.y, bmd);
+        //wave = waves.create(game.world.centerX, game.world.centerY, bmd);
+        wave.angle = wind.angle;
+        //wave.angle = 0;
+        wave.anchor.setTo(0.5, 0.5);
+        wave.alpha = 1;
+        wave.hasReachedMax = false;
+
+        randomWaveTimer.stop();
+      }
+    }
+
+    waveCreationTimer.start();
   }
 
   function create() {
     game.stage.backgroundColor = '#006994';
 
-    game.physics.startSystem(Phaser.Physics.ARCADE);
+    game.physics.startSystem(Phaser.Physics.P2);
     game.physics.arcade.gravity.y = 0;
 
     // The player and its settings
-    player = game.add.sprite(32, game.world.height - 150, 'dude');
+    player = game.add.sprite(game.world.centerX + 32, game.world.centerY + 32, 'dude');
 
     //  We need to enable physics on the player
     game.physics.arcade.enable(player);
 
-    //  Player physics properties. Give the little guy a slight bounce.
+    //  Player physics properties. Give the little guy a slight bounce.n
     player.body.bounce.y = 0;
     player.body.gravity.y = 0;
     player.body.collideWorldBounds = true;
@@ -76,18 +119,47 @@
 
     cursors = game.input.keyboard.createCursorKeys();
 
-    waves = game.add.group();
-    waves.enableBody = true;
-
-    createWave();
+    createWaves();
 
     //  The score
     scoreText = game.add.text(16, 16, 'Swim!', {fontSize: '32px', fill: '#000'});
   }
 
-  function update() {
+  function UpdateWaves() {
+    for (var i = 0; i < waves.children.length; i++) {
+      var wave = waves.children[i];
 
-    game.physics.arcade.overlap(player, waves, collectStar, null, this);
+      if (wave.hasReachedMax) {
+        wave.alpha -= 0.002;
+      } else {
+        wave.alpha += 0.002;
+      }
+
+      if (wave.alpha >= 1) {
+        wave.hasReachedMax = true;
+      }
+
+      if (wave.alpha < 0) {
+        wave.kill();
+      } else {
+        wave.body.velocity.x = (50 * Math.cos(wave.angle * (Math.PI / 180))) * wave.alpha;
+        wave.body.velocity.y = (50 * Math.sin(wave.angle * (Math.PI / 180))) * wave.alpha;
+      }
+    }
+  }
+
+  function update() {
+    player.body.velocity.x *= .95;
+    player.body.velocity.y *= .95;
+
+    game.world.bringToTop(player);
+
+    game.physics.arcade.overlap(player, waves, rideWave, null, this);
+
+    function rideWave(player, wave) {
+      player.body.velocity.x = wave.body.velocity.x;//(10 * Math.cos(wave.angle * (Math.PI / 180)));// * wave.alpha;
+      player.body.velocity.y = wave.body.velocity.y;//+= (10 * Math.sin(wave.angle * (Math.PI / 180)));// * wave.alpha;
+    }
 
     if (cursors.left.isDown) {
       //  Move to the left
@@ -116,22 +188,7 @@
       player.frame = 4;
     }
 
-    for (var i = 0; i < waves.children.length; i++) {
-      var wave = waves.children[i];
-
-      wave.alpha -= 0.01;
-
-      if (wave.alpha < 0) {
-        wave.kill();
-      }
-    }
-
-    function collectStar(player, star) {
-
-      // Removes the star from the screen
-      star.kill();
-
-    }
+    UpdateWaves();
   }
 
 </script>

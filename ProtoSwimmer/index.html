@@ -38,6 +38,10 @@
   var waveCreationTimer;
   var sinkTimer;
 
+  var zoomAmount = -0.7;
+
+  var size = new Phaser.Rectangle();
+
   /**
    * @returns {*}
    */
@@ -114,35 +118,35 @@
 
     bmd.ctx.beginPath();
     bmd.ctx.rect(0, 0, 50, 100);
-    bmd.ctx.fillStyle="#baa05d";
+    bmd.ctx.fillStyle = "#baa05d";
     bmd.ctx.fillRect(0, 0, 50, 100);
 
-    player = game.add.sprite(game.world.centerX + 32, game.world.centerY + 32, bmd);
+    player = game.add.sprite(game.world.centerX, game.world.centerY, bmd);
 
     var mastBmd = game.add.bitmapData(200, 200);
 
     mastBmd.circle(20, 20, 5, '#42330b');
 
-    player.addChild(game.make.sprite(-20, -40, mastBmd));
+    player.addChild(game.make.sprite(-20, -80, mastBmd));
 
     var sailBmd = game.add.bitmapData(120, 5);
 
     sailBmd.ctx.beginPath();
-    sailBmd.ctx.rect(0,0, 120, 5);
-    sailBmd.ctx.fillStyle="#c4b99d";
+    sailBmd.ctx.rect(0, 0, 120, 5);
+    sailBmd.ctx.fillStyle = "#c4b99d";
     sailBmd.ctx.fillRect(0, 0, 120, 5);
-    sail = player.addChild(game.make.sprite(0, -25, sailBmd));
+    sail = player.addChild(game.make.sprite(0, -60, sailBmd));
     sail.anchor.x = 0.5;
     sail.anchor.y = 1.1;
 
     var rudderBmd = game.add.bitmapData(10, 30);
 
     rudderBmd.ctx.beginPath();
-    rudderBmd.ctx.rect(0,0, 10, 30);
-    rudderBmd.ctx.fillStyle="#42330b";
+    rudderBmd.ctx.rect(0, 0, 10, 30);
+    rudderBmd.ctx.fillStyle = "#42330b";
     rudderBmd.ctx.fillRect(0, 0, 10, 30);
 
-    rudder = player.addChild(game.make.sprite(0, 50, rudderBmd));
+    rudder = player.addChild(game.make.sprite(0, 5, rudderBmd));
     rudder.anchor.x = 0.5;
     rudder.anchor.y = 0.25;
 
@@ -167,15 +171,16 @@
     player.body.collideWorldBounds = true;
 
     player.anchor.x = 0.5;
-    player.anchor.y = 0.5;
+    player.anchor.y = 0.95;
   }
 
   function create() {
     game.stage.backgroundColor = '#006994';
+    game.world.setBounds(-960, -600, 1920, 1200);
 
     game.physics.startSystem(Phaser.Physics.P2JS);
-    game.physics.arcade.gravity.y = 0;
     createPlayer();
+    game.physics.p2.enable(player);
 
     cursors = game.input.keyboard.createCursorKeys();
 
@@ -192,6 +197,21 @@
 
     //  The score
     scoreText = game.add.text(16, 16, 'Vaiana!', {fontSize: '32px', fill: '#000'});
+
+    //game.camera.follow(player, Phaser.Camera.FOLLOW_TOPDOWN_TIGHT);
+    game.debug.cameraInfo(game.camera, 32, 32);
+
+    size.setTo(-960, -600, 1920, 1200);
+
+    game.camera.scale.x += zoomAmount;
+    game.camera.scale.y += zoomAmount;
+
+    game.camera.bounds.x = size.x * game.camera.scale.x;
+    game.camera.bounds.y = size.y * game.camera.scale.y;
+    game.camera.bounds.width = size.width * game.camera.scale.x;
+    game.camera.bounds.height = size.height * game.camera.scale.y;
+
+    game.camera.focusOnXY(player.x, player.y);
   }
 
   function updateWaves() {
@@ -245,32 +265,38 @@
       player.body.velocity.y *= .95;
     }
 
-    if (cursors.right.isDown && rudder.angle < 45) {
+    if (cursors.right.isDown && rudder.angle > -45) {
+      rudder.angle -= 5;
+    }
+
+    if (cursors.left.isDown && rudder.angle < 45) {
       rudder.angle += 5;
     }
 
-    if (cursors.left.isDown && rudder.angle > -45) {
-      rudder.angle -= 5;
+    if (cursors.up.isDown && sail.angle < 90) {
+      sail.angle += 1;
+    }
+
+    if (cursors.down.isDown && sail.angle > -90) {
+      sail.angle -= 1;
     }
 
     if (cursors.right.isUp && cursors.left.isUp && rudder.angle !== 0) {
       rudder.angle = rudder.angle > 0 ? rudder.angle - 1 : rudder.angle + 1;
+
+      //rudder.angle = rudder.angle < 0.1 ? 0 : rudder.angle;
     }
 
-    if (cursors.up.isDown && sail.angle < 90) {
-      sail.angle += 5;
+    if (rudder.angle !== 0) {
+      player.body.rotation -= rudder.angle * 0.0005 * Math.abs(player.body.velocity.getMagnitude());
     }
 
-    if (cursors.down.isDown && sail.angle > -90) {
-      sail.angle -= 5;
-    }
 
-    else {
-      //  Stand still
-      player.animations.stop();
+    var moveForce = new Phaser.Point(1, 0);
+    moveForce.rotate(0, 0, player.body.rotation - 90, true);
+    moveForce.setMagnitude(100);
 
-      player.frame = 4;
-    }
+    player.body.velocity = moveForce;
 
     updateWaves();
   }

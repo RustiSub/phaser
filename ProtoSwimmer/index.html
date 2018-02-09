@@ -26,11 +26,10 @@
   var raft;
   var sail;
   var rudder;
+
+  var wind = new Phaser.Point(-1, 0);
+
   var cursors;
-  var wind = {
-    angle: 0,
-    force: 0
-  };
 
   var waves;
   var scoreText;
@@ -38,7 +37,7 @@
   var waveCreationTimer;
   var sinkTimer;
 
-  var zoomAmount = -0.7;
+  var zoomAmount = -0.5;
 
   var size = new Phaser.Rectangle();
 
@@ -195,8 +194,10 @@
 
     createWaves();
 
+    wind.setMagnitude(100);
+
     //  The score
-    scoreText = game.add.text(16, 16, 'Vaiana!', {fontSize: '32px', fill: '#000'});
+    //scoreText = game.add.text(16, 16, 'Vaiana!', {fontSize: '32px', fill: '#000'});
 
     //game.camera.follow(player, Phaser.Camera.FOLLOW_TOPDOWN_TIGHT);
     game.debug.cameraInfo(game.camera, 32, 32);
@@ -211,7 +212,7 @@
     game.camera.bounds.width = size.width * game.camera.scale.x;
     game.camera.bounds.height = size.height * game.camera.scale.y;
 
-    game.camera.focusOnXY(player.x, player.y);
+    //game.camera.focusOnXY(player.x, player.y);
   }
 
   function updateWaves() {
@@ -291,10 +292,23 @@
       player.body.rotation -= rudder.angle * 0.0005 * Math.abs(player.body.velocity.getMagnitude());
     }
 
-
     var moveForce = new Phaser.Point(1, 0);
-    moveForce.rotate(0, 0, player.body.rotation - 90, true);
-    moveForce.setMagnitude(100);
+
+    wind.x = 0;
+    wind.y = -50;
+    var absoluteSailAngle = sail.angle + player.angle;
+    var sailVector = new Phaser.Point(Math.cos(absoluteSailAngle * (Math.PI / 180)), Math.sin(absoluteSailAngle * (Math.PI / 180)));
+
+    var windVector = new Phaser.Point(wind);
+    sailVector.rperp();
+    sailVector.normalize();
+    windVector.normalize();
+
+    var sailEffectiveness = wind.dot(sailVector) / 100;
+
+    moveForce.x = wind.x;
+    moveForce.y = wind.y;
+    moveForce.setMagnitude(wind.getMagnitude() * sailEffectiveness);
 
     player.body.velocity = moveForce;
 

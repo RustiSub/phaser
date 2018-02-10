@@ -169,6 +169,9 @@
 
     player.body.collideWorldBounds = true;
 
+    player.x = 0;
+    player.y = 0;
+
     player.anchor.x = 0.5;
     player.anchor.y = 0.95;
   }
@@ -211,8 +214,6 @@
     game.camera.bounds.y = size.y * game.camera.scale.y;
     game.camera.bounds.width = size.width * game.camera.scale.x;
     game.camera.bounds.height = size.height * game.camera.scale.y;
-
-    //game.camera.focusOnXY(player.x, player.y);
   }
 
   function updateWaves() {
@@ -295,7 +296,7 @@
     var moveForce = new Phaser.Point(1, 0);
 
     wind.x = 0;
-    wind.y = -50;
+    wind.y = -100;
     var absoluteSailAngle = sail.angle + player.angle;
     var sailVector = new Phaser.Point(Math.cos(absoluteSailAngle * (Math.PI / 180)), Math.sin(absoluteSailAngle * (Math.PI / 180)));
 
@@ -305,12 +306,18 @@
     windVector.normalize();
 
     var sailEffectiveness = wind.dot(sailVector) / 100;
+    var boatVector = new Phaser.Point(Math.cos(player.angle * (Math.PI / 180)), Math.sin(player.angle * (Math.PI / 180)));
+    var boatEffectiveness = sailVector.dot(boatVector.rperp());
 
-    moveForce.x = wind.x;
-    moveForce.y = wind.y;
-    moveForce.setMagnitude(wind.getMagnitude() * sailEffectiveness);
+    moveForce.x = boatVector.x;
+    moveForce.y = boatVector.y;
+    moveForce.setMagnitude(wind.getMagnitude() * sailEffectiveness * boatEffectiveness);
 
-    player.body.velocity = moveForce;
+    if (moveForce.dot(wind) >0 ) {
+      player.body.velocity = moveForce; //boatVector;
+    } else {
+      //Reduce Player Health, boat is going against the wind
+    }
 
     updateWaves();
   }

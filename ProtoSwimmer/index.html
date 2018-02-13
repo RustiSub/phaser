@@ -33,6 +33,7 @@
   };
   var raft;
   var sail;
+  var sailBmd;
   var rudder;
 
   var windIndicator;
@@ -132,10 +133,10 @@
 
       var grd = islandBmd.ctx.createRadialGradient(radius, radius, 80, radius, radius, radius);
 
-      grd.addColorStop(0,'rgba(236, 215, 175,1)');
-      grd.addColorStop(1,'rgba(114, 175, 211,0)');
+      grd.addColorStop(0, 'rgba(236, 215, 175,1)');
+      grd.addColorStop(1, 'rgba(114, 175, 211,0)');
 
-      islandBmd.ctx.fillStyle= grd;
+      islandBmd.ctx.fillStyle = grd;
       islandBmd.circle(radius, radius, radius);
 
       var randomIslandLocation = {
@@ -195,15 +196,11 @@
 
     player.addChild(game.make.sprite(-20, -80, mastBmd));
 
-    var sailBmd = game.add.bitmapData(120, 5);
+    sailBmd = game.add.bitmapData(120, 50);
 
-    sailBmd.ctx.beginPath();
-    sailBmd.ctx.rect(0, 0, 120, 5);
-    sailBmd.ctx.fillStyle = "#e1d8cf";
-    sailBmd.ctx.fillRect(0, 0, 120, 5);
     sail = player.addChild(game.make.sprite(0, -60, sailBmd));
     sail.anchor.x = 0.5;
-    sail.anchor.y = 1.1;
+    sail.anchor.y = 0.7;
 
     var rudderBmd = game.add.bitmapData(10, 30);
 
@@ -215,15 +212,6 @@
     rudder = player.addChild(game.make.sprite(0, 5, rudderBmd));
     rudder.anchor.x = 0.5;
     rudder.anchor.y = 0.25;
-
-    /*    var windIndicationBmd = game.add.bitmapData(500, 500);
-
-        windIndicationBmd.ctx.beginPath();
-        windIndicationBmd.ctx.moveTo(100, 0);
-        windIndicationBmd.ctx.bezierCurveTo(10,0, 10,0, 0,0);
-        windIndicationBmd.ctx.stroke();
-
-        windIndicator = player.addChild(game.make.sprite(0,0, windIndicationBmd));*/
 
     player.threading = false;
     player.stroking = false;
@@ -305,7 +293,7 @@
     //  The score
     //scoreText = game.add.text(16, 16, 'Vaiana!', {fontSize: '32px', fill: '#000'});
 
-    game.camera.follow(player, Phaser.Camera.FOLLOW_TOPDOWN);
+    game.camera.follow(player, Phaser.Camera.FOLLOW_TOPDOWN_TIGHT);
     //game.debug.cameraInfo(game.camera, 32, 32);
 
     /*    size.setTo(-960, -600, 1920, 1200);
@@ -362,17 +350,7 @@
   function update() {
     game.world.bringToTop(player);
 
-    function rideWave(player, wave) {
-      if (!player.surfing) {
-        player.body.velocity = player.body.velocity.add(wave.body.velocity.x, wave.body.velocity.y);
-        player.surfing = true;
-      }
-    }
-
-    var surfing = game.physics.arcade.overlap(player, waves, rideWave, null, this);
-    //wind.angle = 90;
-
-    wind.setMagnitude(0);
+    wind.setMagnitude(50);
 
     if (cursors.right.isDown && rudder.angle > -45) {
       rudder.angle -= 5;
@@ -405,14 +383,28 @@
     var absoluteSailAngle = sail.angle + player.angle;
     var sailVector = new Phaser.Point(Math.cos(absoluteSailAngle * (Math.PI / 180)), Math.sin(absoluteSailAngle * (Math.PI / 180)));
 
-    var windVector = new Phaser.Point(wind);
-    sailVector.rperp();
-    sailVector.normalize();
+    var windVector = new Phaser.Point(wind.x, wind.y);
     windVector.normalize();
 
-    var sailEffectiveness = wind.dot(sailVector) / 100;
+    sailVector.rperp();
+    sailVector.normalize();
+
+    var sailEffectiveness = windVector.dot(sailVector);
+    sailBmd.cls();
+    sailBmd.ctx.beginPath();
+    sailBmd.ctx.moveTo(0, 30);
+    sailBmd.ctx.strokeStyle = '#e1d8cf';
+    sailBmd.ctx.lineWidth = 10;
+    sailEffectiveness = sailEffectiveness * (wind.getMagnitude() / 100);
+
+    let sailBulge = 30 - (sailEffectiveness * 30);
+
+    sailBulge = Phaser.Math.clamp(sailBulge, 0, 30);
+    sailBmd.ctx.bezierCurveTo(60, sailBulge, 60, sailBulge, 120, 30);
+    sailBmd.ctx.stroke();
+
     var boatVector = new Phaser.Point(Math.cos(player.angle * (Math.PI / 180)), Math.sin(player.angle * (Math.PI / 180)));
-    var boatEffectiveness = sailVector.dot(boatVector.rperp());
+    var boatEffectiveness = sailVector.dot(boatVector.normalize().rperp());
 
     moveForce.x = boatVector.x;
     moveForce.y = boatVector.y;
@@ -421,7 +413,7 @@
     if (cursors.spaceKey.isDown && !player.rowing) {
       moveForce = boatVector;
       moveForce.setMagnitude(moveForce.getMagnitude() + 100);
-      player.rowing = false;
+      player.rowing = true;
     } else if (cursors.spaceKey.isUp) {
       player.rowing = false;
     }
@@ -429,14 +421,16 @@
     player.body.velocity.x += moveForce.x;
     player.body.velocity.y += moveForce.y;
 
-    player.body.velocity.x *= .95;
-    player.body.velocity.y *= .95;
+    /*if (player.rowing) {
+      player.body.velocity.x *= 0.99;
+      player.body.velocity.y *= 0.99;
+    } else {*/
+      player.body.velocity.x *= 0.75;
+      player.body.velocity.y *= 0.75;
+    //}
 
     oceanFloorTexture.tilePosition.x += (oldPlayerPosition.x - player.x) * 0.25;
     oceanFloorTexture.tilePosition.y += (oldPlayerPosition.y - player.y) * 0.25;
-
-//    wavesTexture.tilePosition.x += (oldPlayerPosition.x - player.x);
-//    wavesTexture.tilePosition.y += (oldPlayerPosition.y - player.y);
 
     oldPlayerPosition.x = player.x;
     oldPlayerPosition.y = player.y;

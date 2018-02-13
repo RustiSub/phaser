@@ -8,6 +8,11 @@
         body {
             margin: 0;
         }
+
+        canvas {
+            display: block;
+            margin: auto;
+        }
     </style>
 </head>
 <body>
@@ -17,15 +22,20 @@
   var game = new Phaser.Game(800, 600, Phaser.AUTO, '', {preload: preload, create: create, update: update});
 
   function preload() {
-    game.load.image('sky', 'assets/sky.png');
-    game.load.image('star', 'assets/star.png');
-    game.load.spritesheet('dude', 'assets/dude.png', 32, 48);
+    this.game.load.image('mountains-back', 'assets/floor.png');
+    this.game.load.image('waves', 'assets/waves.jpg');
   }
 
   var player;
+  var oldPlayerPosition = {
+    x: 0,
+    y: 0
+  };
   var raft;
   var sail;
   var rudder;
+
+  var windIndicator;
 
   var wind = new Phaser.Point(-1, 0);
 
@@ -37,7 +47,13 @@
   var waveCreationTimer;
   var sinkTimer;
 
-  var zoomAmount = -0.5;
+  //var zoomAmount = -0.5;
+  //var zoomAmount = 0;
+
+  var sea;
+
+  var oceanFloorTexture;
+  var wavesTexture;
 
   var size = new Phaser.Rectangle();
 
@@ -64,7 +80,7 @@
       bmd.ctx.rect(0, 0, width, height);
 
       var grd = bmd.context.createLinearGradient(0, 0, 100, 0);
-      grd.addColorStop(0, "#006994");
+      grd.addColorStop(0, "#37ecba");
       //grd.addColorStop(0.1, "#39515b");
       grd.addColorStop(1, "white");
       bmd.context.fillStyle = grd;
@@ -75,12 +91,12 @@
         y: Math.random() * game.world.height
       };
 
-//      wave = waves.create(randomWaveLocation.x, randomWaveLocation.y, bmd);
-      wave = waves.create(game.world.centerX - 50, game.world.centerY, bmd);
+      wave = waves.create(randomWaveLocation.x, randomWaveLocation.y, bmd);
+//      wave = waves.create(game.world.centerX - 50, game.world.centerY, bmd);
       wave.angle = wind.angle;
       //wave.angle = 0;
       wave.anchor.setTo(0.5, 0.5);
-      wave.alpha = 1;
+      wave.alpha = 0.75;
       wave.hasReachedMax = false;
     }
 
@@ -149,8 +165,18 @@
     rudder.anchor.x = 0.5;
     rudder.anchor.y = 0.25;
 
+    /*    var windIndicationBmd = game.add.bitmapData(500, 500);
+
+        windIndicationBmd.ctx.beginPath();
+        windIndicationBmd.ctx.moveTo(100, 0);
+        windIndicationBmd.ctx.bezierCurveTo(10,0, 10,0, 0,0);
+        windIndicationBmd.ctx.stroke();
+
+        windIndicator = player.addChild(game.make.sprite(0,0, windIndicationBmd));*/
+
     player.threading = false;
     player.stroking = false;
+    player.rowing = false;
     player.surfing = false;
     player.stats = {
       headLevel: 1,
@@ -166,19 +192,57 @@
     player.body.gravity.y = 0;
 
     player.body.mass = 1;
-
     player.body.collideWorldBounds = true;
 
-    player.x = 0;
-    player.y = 0;
 
     player.anchor.x = 0.5;
     player.anchor.y = 0.95;
   }
 
   function create() {
-    game.stage.backgroundColor = '#006994';
-    game.world.setBounds(-960, -600, 1920, 1200);
+
+    //game.stage.backgroundColor = '#006994';
+
+    var myBitmap = game.add.bitmapData(1920, 1200);
+    var grd = myBitmap.context.createLinearGradient(0, 0, 0, 1920);
+
+    //background-image: linear-gradient(to top, #37ecba 0%, #72afd3 100%);
+
+    grd.addColorStop(0, "#37ecba");
+
+    /*    var even = false;
+
+        for (var i = 100; i < 1920; i+= 700){
+          even = !even;
+
+          if (even) {
+            grd.addColorStop(i / 1920, "#72afd3");
+          } else {
+            grd.addColorStop(i / 1920, "#37ecba");
+          }
+        }*/
+
+    grd.addColorStop(1, "#72afd3");
+//    grd.addColorStop(1, "#37ecba");
+
+    oceanFloorTexture = game.add.tileSprite(0,
+        game.height - game.cache.getImage('mountains-back').height,
+        game.width,
+        game.cache.getImage('mountains-back').height,
+        'mountains-back'
+    );
+
+  oceanFloorTexture.fixedToCamera = true;
+
+    myBitmap.context.fillStyle = grd;
+    myBitmap.context.fillRect(0, 0, 1920, 1200);
+//    var background = game.add.sprite(0, 0, myBitmap);
+//    background.alpha = 0.7;
+
+    wavesTexture = game.add.tileSprite(0, 0, 1920, 1200, 'waves');
+    wavesTexture.alpha = 0.5;
+
+    game.world.setBounds(0, 0, 1920, 1200);
 
     game.physics.startSystem(Phaser.Physics.P2JS);
     createPlayer();
@@ -197,23 +261,26 @@
 
     createWaves();
 
-    wind.setMagnitude(100);
+    wind.x = 0;
+    wind.y = -1;
+    //wind.setMagnitude(100);
+
 
     //  The score
     //scoreText = game.add.text(16, 16, 'Vaiana!', {fontSize: '32px', fill: '#000'});
 
-    //game.camera.follow(player, Phaser.Camera.FOLLOW_TOPDOWN_TIGHT);
-    game.debug.cameraInfo(game.camera, 32, 32);
+    game.camera.follow(player, Phaser.Camera.FOLLOW_TOPDOWN);
+    //game.debug.cameraInfo(game.camera, 32, 32);
 
-    size.setTo(-960, -600, 1920, 1200);
+    /*    size.setTo(-960, -600, 1920, 1200);
 
-    game.camera.scale.x += zoomAmount;
-    game.camera.scale.y += zoomAmount;
+        game.camera.scale.x += zoomAmount;
+        game.camera.scale.y += zoomAmount;
 
-    game.camera.bounds.x = size.x * game.camera.scale.x;
-    game.camera.bounds.y = size.y * game.camera.scale.y;
-    game.camera.bounds.width = size.width * game.camera.scale.x;
-    game.camera.bounds.height = size.height * game.camera.scale.y;
+        game.camera.bounds.x = size.x * game.camera.scale.x;
+        game.camera.bounds.y = size.y * game.camera.scale.y;
+        game.camera.bounds.width = size.width * game.camera.scale.x;
+        game.camera.bounds.height = size.height * game.camera.scale.y;*/
   }
 
   function updateWaves() {
@@ -260,12 +327,9 @@
     }
 
     var surfing = game.physics.arcade.overlap(player, waves, rideWave, null, this);
+    //wind.angle = 90;
 
-    if (!surfing) {
-      player.surfing = false;
-      player.body.velocity.x *= .95;
-      player.body.velocity.y *= .95;
-    }
+    wind.setMagnitude(10);
 
     if (cursors.right.isDown && rudder.angle > -45) {
       rudder.angle -= 5;
@@ -290,13 +354,11 @@
     }
 
     if (rudder.angle !== 0) {
-      player.body.rotation -= rudder.angle * 0.0005 * Math.abs(player.body.velocity.getMagnitude());
+      player.body.rotation -= rudder.angle * 0.0002 * Math.abs(player.body.velocity.getMagnitude());
     }
 
     var moveForce = new Phaser.Point(1, 0);
 
-    wind.x = 0;
-    wind.y = -100;
     var absoluteSailAngle = sail.angle + player.angle;
     var sailVector = new Phaser.Point(Math.cos(absoluteSailAngle * (Math.PI / 180)), Math.sin(absoluteSailAngle * (Math.PI / 180)));
 
@@ -313,8 +375,31 @@
     moveForce.y = boatVector.y;
     moveForce.setMagnitude(wind.getMagnitude() * sailEffectiveness * boatEffectiveness);
 
-    if (moveForce.dot(wind) >0 ) {
-      player.body.velocity = moveForce; //boatVector;
+    if (cursors.spaceKey.isDown && !player.rowing) {
+      moveForce = boatVector;
+      moveForce.setMagnitude(moveForce.getMagnitude() + 100);
+      player.rowing = true;
+    } else if (cursors.spaceKey.isUp) {
+      player.rowing = false;
+    }
+
+    player.body.velocity.x += moveForce.x;
+    player.body.velocity.y += moveForce.y;
+
+    player.body.velocity.x *= .95;
+    player.body.velocity.y *= .95;
+
+    oceanFloorTexture.tilePosition.x += (oldPlayerPosition.x - player.x) * 0.25;
+    oceanFloorTexture.tilePosition.y += (oldPlayerPosition.y - player.y) * 0.25;
+
+    wavesTexture.tilePosition.x += (oldPlayerPosition.x - player.x);
+    wavesTexture.tilePosition.y += (oldPlayerPosition.y - player.y);
+
+    oldPlayerPosition.x = player.x;
+    oldPlayerPosition.y = player.y;
+
+    if (moveForce.dot(wind) > 0) {
+
     } else {
       //Reduce Player Health, boat is going against the wind
     }

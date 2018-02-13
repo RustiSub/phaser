@@ -124,6 +124,57 @@
     waveCreationTimer.start();
   }
 
+  function createIslands() {
+    function createIsland() {
+      var radius = 150;
+      let diameter = radius * 2;
+      var islandBmd = game.add.bitmapData(diameter, diameter);
+
+      var grd = islandBmd.ctx.createRadialGradient(radius, radius, 80, radius, radius, radius);
+
+      grd.addColorStop(0,'rgba(236, 215, 175,1)');
+      grd.addColorStop(1,'rgba(114, 175, 211,0)');
+
+      islandBmd.ctx.fillStyle= grd;
+      islandBmd.circle(radius, radius, radius);
+
+      var randomIslandLocation = {
+        x: Phaser.Math.clamp(Math.random() * game.world.width, 0 + diameter, game.world.width - (diameter)),
+        y: Phaser.Math.clamp(Math.random() * game.world.height, 0 + diameter, game.world.height - (diameter))
+      };
+//
+//      for(var i = 0; i < spawnedCoords.length; i += 0) {
+//        var knownLocation = spawnedCoords[i];
+//
+//        let overlapRight = randomIslandLocation.x > knownLocation.x && randomIslandLocation.x < knownLocation.x + diameter;
+//        let overlapLeft = randomIslandLocation.x < knownLocation.x && randomIslandLocation.x > knownLocation.x + diameter;
+//        let overlapUp = randomIslandLocation.y > knownLocation.y && randomIslandLocation.y < knownLocation.y + diameter;
+//        let overlapDown = randomIslandLocation.y < knownLocation.y && randomIslandLocation.y > knownLocation.y + diameter;
+//
+//        if (overlapRight || overlapLeft || overlapUp || overlapDown) {
+//          randomIslandLocation = {
+//            x: Phaser.Math.clamp(Math.random() * game.world.width, 0 + diameter, game.world.width - (diameter)),
+//            y: Phaser.Math.clamp(Math.random() * game.world.height, 0 + diameter, game.world.height - (diameter))
+//          };
+//        } else {
+//            i++;
+//        }
+//      }
+
+//      spawnedCoords.push(randomIslandLocation);
+
+      game.add.sprite(randomIslandLocation.x, randomIslandLocation.y, islandBmd);
+//      game.add.sprite(randomIslandLocationX, randomIslandLocationY, islandBmd);
+    }
+
+    var spawnedCoords = [];
+
+    createIsland();
+//    createIsland(game.world.width - 300, 0 + 300);
+//    createIsland(game.world.height - 300, 0 + 300);
+//    createIsland(game.world.height - 300, game.world.height - 300);
+  }
+
   function createPlayer() {
 // The player and its settings
 
@@ -133,7 +184,7 @@
 
     bmd.ctx.beginPath();
     bmd.ctx.rect(0, 0, 50, 100);
-    bmd.ctx.fillStyle = "#baa05d";
+    bmd.ctx.fillStyle = "#8B6914";
     bmd.ctx.fillRect(0, 0, 50, 100);
 
     player = game.add.sprite(game.world.centerX, game.world.centerY, bmd);
@@ -148,7 +199,7 @@
 
     sailBmd.ctx.beginPath();
     sailBmd.ctx.rect(0, 0, 120, 5);
-    sailBmd.ctx.fillStyle = "#c4b99d";
+    sailBmd.ctx.fillStyle = "#e1d8cf";
     sailBmd.ctx.fillRect(0, 0, 120, 5);
     sail = player.addChild(game.make.sprite(0, -60, sailBmd));
     sail.anchor.x = 0.5;
@@ -206,24 +257,8 @@
     var myBitmap = game.add.bitmapData(1920, 1200);
     var grd = myBitmap.context.createLinearGradient(0, 0, 0, 1920);
 
-    //background-image: linear-gradient(to top, #37ecba 0%, #72afd3 100%);
-
     grd.addColorStop(0, "#37ecba");
-
-    /*    var even = false;
-
-        for (var i = 100; i < 1920; i+= 700){
-          even = !even;
-
-          if (even) {
-            grd.addColorStop(i / 1920, "#72afd3");
-          } else {
-            grd.addColorStop(i / 1920, "#37ecba");
-          }
-        }*/
-
     grd.addColorStop(1, "#72afd3");
-//    grd.addColorStop(1, "#37ecba");
 
     oceanFloorTexture = game.add.tileSprite(0,
         game.height - game.cache.getImage('mountains-back').height,
@@ -232,12 +267,12 @@
         'mountains-back'
     );
 
-  oceanFloorTexture.fixedToCamera = true;
+    oceanFloorTexture.fixedToCamera = true;
 
     myBitmap.context.fillStyle = grd;
     myBitmap.context.fillRect(0, 0, 1920, 1200);
-//    var background = game.add.sprite(0, 0, myBitmap);
-//    background.alpha = 0.7;
+    var background = game.add.sprite(0, 0, myBitmap);
+    background.alpha = 0.2;
 
     wavesTexture = game.add.tileSprite(0, 0, 1920, 1200, 'waves');
     wavesTexture.alpha = 0.5;
@@ -260,6 +295,7 @@
     //sinkTimer.start();
 
     createWaves();
+    createIslands()
 
     wind.x = 0;
     wind.y = -1;
@@ -281,6 +317,13 @@
         game.camera.bounds.y = size.y * game.camera.scale.y;
         game.camera.bounds.width = size.width * game.camera.scale.x;
         game.camera.bounds.height = size.height * game.camera.scale.y;*/
+
+    var zoomFactor = 0.5;
+    var cameraFocusX = 100;
+    var cameraFocusY = 200;
+
+//    game.world.scale.setTo(zoomFactor);
+//    game.camera.focusOnXY(cameraFocusX * game.world.scale.x, cameraFocusY * game.world.scale.y);
   }
 
   function updateWaves() {
@@ -329,7 +372,7 @@
     var surfing = game.physics.arcade.overlap(player, waves, rideWave, null, this);
     //wind.angle = 90;
 
-    wind.setMagnitude(10);
+    wind.setMagnitude(0);
 
     if (cursors.right.isDown && rudder.angle > -45) {
       rudder.angle -= 5;
@@ -378,7 +421,7 @@
     if (cursors.spaceKey.isDown && !player.rowing) {
       moveForce = boatVector;
       moveForce.setMagnitude(moveForce.getMagnitude() + 100);
-      player.rowing = true;
+      player.rowing = false;
     } else if (cursors.spaceKey.isUp) {
       player.rowing = false;
     }
@@ -392,8 +435,8 @@
     oceanFloorTexture.tilePosition.x += (oldPlayerPosition.x - player.x) * 0.25;
     oceanFloorTexture.tilePosition.y += (oldPlayerPosition.y - player.y) * 0.25;
 
-    wavesTexture.tilePosition.x += (oldPlayerPosition.x - player.x);
-    wavesTexture.tilePosition.y += (oldPlayerPosition.y - player.y);
+//    wavesTexture.tilePosition.x += (oldPlayerPosition.x - player.x);
+//    wavesTexture.tilePosition.y += (oldPlayerPosition.y - player.y);
 
     oldPlayerPosition.x = player.x;
     oldPlayerPosition.y = player.y;

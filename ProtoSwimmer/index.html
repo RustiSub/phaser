@@ -283,10 +283,10 @@
     //sinkTimer.start();
 
     createWaves();
-    createIslands()
+    createIslands();
 
-    wind.x = 0;
-    wind.y = -1;
+    wind.x = -1;
+    wind.y = 0;
     //wind.setMagnitude(100);
 
 
@@ -350,7 +350,7 @@
   function update() {
     game.world.bringToTop(player);
 
-    wind.setMagnitude(50);
+    wind.setMagnitude(75);
 
     if (cursors.right.isDown && rudder.angle > -45) {
       rudder.angle -= 5;
